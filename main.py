@@ -10,7 +10,7 @@ import importlib
 
 def run(cfg):
     ### Import init_setting
-    model_name, class_name, batch_size, epochs, lr, seed = cfg["model_name"], cfg["class_name"], cfg["batch_size"], cfg["epochs"], cfg["lr"], cfg["seed"]
+    batch_size, epochs, lr, seed = cfg["batch_size"], cfg["epochs"], cfg["lr"], cfg["seed"]
     
     # Set Seed
     set_seed(seed)
