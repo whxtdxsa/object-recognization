@@ -1,45 +1,21 @@
-import os
-import pandas as pd
-import matplotlib.pyplot as plt
-from tbparse import SummaryReader
-folder_name = "experiments"
-file_name = "metrics.csv"
-model_dirs = {
-#     "bs32_ep15_lr_0.09": f"{folder_name}/MiniResNet_v4_bs32_ep15_lr0.09/{file_name}",
-#     "bs32_ep15_lr_0.12": f"{folder_name}/MiniResNet_v4_bs32_ep15_lr0.12/{file_name}",
+# utils/visualize.py
+import cv2
 
-#     "bs64_ep15_lr_0.01": f"{folder_name}/MiniResNet_v4_bs64_ep15_lr0.01/{file_name}",
-#     "bs64_ep15_lr_0.03": f"{folder_name}/MiniResNet_v4_bs64_ep15_lr0.03/{file_name}",
-#     "bs64_ep15_lr_0.06": f"{folder_name}/MiniResNet_v4_bs64_ep15_lr0.06/{file_name}",
-#     "bs64_ep15_lr_0.09": f"{folder_name}/MiniResNet_v4_bs64_ep15_lr0.09/{file_name}",
-#     "bs64_ep15_lr_0.12": f"{folder_name}/MiniResNet_v4_bs64_ep15_lr0.12/{file_name}",
-}
+def draw_detections(img, detections, class_names=None, color=(0, 255, 0), thickness=2):
+    """
+    img: 원본 이미지 (BGR, numpy)
+    detections: tensor of shape (N, 6) → [x1, y1, x2, y2, conf, cls]
+    class_names: optional list of class names
+    """
+    for det in detections:
+        x1, y1, x2, y2, conf, cls_id = map(int, det[:6])
+        label = f"{class_names[int(cls_id)] if class_names else int(cls_id)} {det[4]:.2f}"
+        # Draw box
+        cv2.rectangle(img, (x1, y1), (x2, y2), color, thickness)
+        # Draw label background
+        (tw, th), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+        cv2.rectangle(img, (x1, y1 - th - 4), (x1 + tw, y1), color, -1)
+        # Draw label text
+        cv2.putText(img, label, (x1, y1 - 2), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (255, 255, 255), 1)
 
-colors_25 = [
-    "#1f77b4", "#ff7f0e", "#2ca02c", "#d62728", "#9467bd", "#8c564b",
-    "#e377c2", "#7f7f7f", "#bcbd22", "#17becf",  # Tableau 10
-
-    "#393b79", "#637939", "#8c6d31", "#843c39", "#7b4173",  # D3 Category20b
-    "#3182bd", "#31a354", "#756bb1", "#636363", "#e6550d",  # D3 Category20c
-
-    "#f781bf", "#a6cee3", "#b2df8a", "#fb9a99", "#cab2d6"   # Pastel from Set3
-]
-
-plt.figure(figsize=(10, 6))
-
-for i, (model_name, path) in enumerate(model_dirs.items()):
-
-    df = pd.read_csv(path)
-    color = colors_25[i]
-
-    # plt.plot(df["epoch"], df["train_loss"], label=f"{model_name}_train", color=color, linewidth=1.0)
-    plt.plot(df["epoch"], df["acc"], label=f"{model_name}", color=color, linewidth=3.0)
-
-plt.xlabel("Epoch")
-plt.ylabel("Accuracy")
-plt.title("Accuracy of MiniResNet_v4")
-plt.legend(loc='upper center', bbox_to_anchor=(0.5, -0.1), ncol=5, fontsize="small")
-plt.tight_layout()
-plt.grid(True)
-# plt.ylim(0.08, 0.2)
-plt.savefig("acc.png")
+    return img
