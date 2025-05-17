@@ -47,3 +47,25 @@ def custom_collate_fn(batch):
     targets = [item[1] for item in batch]
     images = torch.stack(images, dim=0)
     return images, targets
+
+from PIL import ImageDraw
+import torchvision.transforms.functional as F
+import os
+
+def draw_bboxes(image_tensor, pred_tensor, conf_threshold=0.5, save_path="output.jpg"):
+    img = F.to_pil_image(image_tensor.cpu())
+    draw = ImageDraw.Draw(img)
+
+    for box in pred_tensor:
+        x, y, w, h, conf = box.tolist()
+        if conf < conf_threshold:
+            continue
+        x1 = x * img.width
+        y1 = y * img.height
+        x2 = x1 + w * img.width
+        y2 = y1 + h * img.height
+        draw.rectangle([x1, y1, x2, y2], outline='red', width=2)
+
+    os.makedirs(os.path.dirname(save_path) or ".", exist_ok=True)
+    img.save(save_path)
+    print(f"Saved: {save_path}")

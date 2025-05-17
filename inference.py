@@ -1,59 +1,54 @@
-# inference.py
-import os
-import cv2
 import torch
+import torchvision
+import torch.optim as optim
 
-from model.yolov5n import YOLOv5nWrapper
-from utils.preprocess import preprocess_image
-from utils.postprocess import non_max_suppression
-from utils.visualize import draw_detections
-from utils.coco import COCO_CLASSES  # 클래스 이름 리스트
-from utils.csv_writer import save_detections_to_csv
+# --------------------------
+# Set Env
+# --------------------------
+# Path
+img_val_path = "./data/images/val2017/"
+label_path = "./data/labels/annotations/"
+train_file = "instances_train2017.json"
+val_file = "instances_val2017.json"
 
-def run_inference(input_dir='input', output_dir='output', weights='yolov5n.pt', device='cpu'):
-    os.makedirs(output_dir, exist_ok=True)
+# Preprocess Data
+from src.preprocess import extract_person_data
+extract_person_data(label_path, train_file)
+extract_person_data(label_path, val_file)
 
-    # 파일 리스트 불러오기
-    image_files = [f for f in os.listdir(input_dir) if f.lower().endswith(('.jpg', '.png', '.jpeg'))]
+train_file = "instances_train_person_only.json"
+val_file = "instances_val_person_only.json"
 
-    # 모델 로드
-    model = YOLOv5nWrapper(weights, device)
+# Env
+from src.utils import set_seed, get_amp_components
+set_seed(42)
+device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print(f"Using device: {device}\n")
 
-    for file_name in sorted(image_files):
-        input_path = os.path.join(input_dir, file_name)
-        output_path = os.path.join(output_dir, file_name.replace('.', '_det.'))
-
-        img = cv2.imread(input_path)
-        if img is None:
-            print(f"[경고] {input_path} 로드 실패.")
-            continue
-
-        x = preprocess_image(img)
-        preds = model.predict(x)
-        detections = non_max_suppression(preds)[0]
-
-        img_with_boxes = draw_detections(img.copy(), detections, class_names=COCO_CLASSES)
-        cv2.imwrite(output_path, img_with_boxes)
-        print(f"[완료] {output_path} 저장됨.")
-
-if __name__ == "__main__":
-    run_inference()
+# Model, Criterion, Optimizer
+from src.model import SimpleDetector
+network = SimpleDetector()
 
 
+# --------------------------
+# Define Train Procedure
+# --------------------------
+from src.loader import get_custom_dataloaders
+train_loader, test_loader = get_custom_dataloaders(batch_size=10) 
 
-for file_name in sorted(image_files):
-    input_path = os.path.join(input_dir, file_name)
-    output_path = os.path.join(output_dir, file_name.replace('.', '_det.'))
+network.load_state_dict(torch.load("weights/detector.pt", map_location="cpu"))
+network.to(device)
+network.eval()
 
-    img = cv2.imread(input_path)
-    if img is None:
-        continue
+# Training
+from src.utils import draw_bboxes
+with torch.no_grad():
+    for i, (images, _) in enumerate(test_loader):
+        images = images.to(device)
+        preds = network(images)  # [1, 16, 5]
+        draw_bboxes(images[0], preds[0], conf_threshold=0.5, save_path=f"outputs/pred_{i}.png")
+        if i == 4:
+            break  
 
-    x = preprocess_image(img)
-    preds = model.predict(x)
-    detections = non_max_suppression(preds)[0]
 
-    img_with_boxes = draw_detections(img.copy(), detections, class_names=COCO_CLASSES)
-    cv2.imwrite(output_path, img_with_boxes)
 
-    save_detections_to_csv(csv_path, file_name, detections)

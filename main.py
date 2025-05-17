@@ -66,7 +66,7 @@ show_bbox(img_val_path + image_id_to_info[id]['file_name'], image_id_to_bboxes[i
 # HyperParams
 batch_size = 128
 epochs = 5
-lr = 0.1
+lr = 0.001
 
 # Model, Criterion, Optimizer
 from src.model import SimpleDetector
@@ -101,11 +101,11 @@ for epoch in range(1, epochs + 1):
 
 torch.save(network.state_dict(), 'weights/detector.pt') 
 
-test_acc = evaluate_accuracy(network, test_loader, device, amp_context)
-print(f"Test Acc: {test_acc:.4f}")
+# test_acc = evaluate_accuracy(network, test_loader, device, amp_context)
+# print(f"Test Acc: {test_acc:.4f}")
 
 # Logging
-from src.misc import init_csv_log, log_to_csv
+from src.utils import init_csv_log, log_to_csv
 experiment_name = f"{class_name}_bs{batch_size}_ep{epochs}_lr{lr}"
 log_path = f"experiments/{experiment_name}/metrics.csv"
 
