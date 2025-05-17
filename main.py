@@ -1,7 +1,7 @@
-from data.loader import get_kmnist_dataloaders 
+from data.loader import get_custom_dataloaders 
 from train.trainer import train_one_epoch, evaluate_loss, evaluate_accuracy
 from utils.misc import set_seed, init_csv_log, log_to_csv, get_amp_components
-
+from model.model import SimpleDetector, DetectionLoss
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -16,8 +16,7 @@ def run(cfg):
     set_seed(seed)
 
     # Set Model
-    module = importlib.import_module(f"models.{model_name}")
-    MyModel = getattr(module, class_name)
+    module = SimpleDetector() 
 
     # Set device
     device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -26,14 +25,13 @@ def run(cfg):
 
 
     ### Define train procedure
-
     # Get data loader
-    train_loader, test_loader = get_kmnist_dataloaders(batch_size=batch_size) 
+    train_loader, test_loader = get_custom_dataloaders(batch_size=batch_size) 
     
     # Set Model, Criterion, Optimizer
     network = MyModel().to(device)
-    criterion = nn.CrossEntropyLoss()
-    optimizer = optim.SGD(network.parameters(), lr)
+    criterion = DetectionLoss()
+    optimizer = optim.Adam(network.parameters(), lr)
 
     train_losses = []
     test_losses = []
@@ -48,6 +46,8 @@ def run(cfg):
         test_losses.append(test_loss)
 
         print(f"Train_loss: {train_loss:.4f}, Test_loss: {test_loss:.4f}")
+    
+    torch.save(network.state_dict(), 'weights/detector.pt') 
 
     test_acc = evaluate_accuracy(network, test_loader, device, amp_context)
     print(f"Test Acc: {test_acc:.4f}")
@@ -62,6 +62,7 @@ def run(cfg):
             "train_loss": train_losses[epoch],
             "test_loss": test_losses[epoch]
         })
+
 
 if __name__ == "__main__":
     # Get hyperparams
