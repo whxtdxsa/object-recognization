@@ -1,12 +1,14 @@
+save_path = "./src/experiments/chart/"
+
 
 def extract_annotations(anno):
-    print('---------info of annotations')
+    print('Info of annotations------------------')
     print(anno.keys())
     print(anno['images'][0])
     print(anno['annotations'][0])
     print(anno['categories'][0])
-    print('----------------------------')
 
+    print('-------------------------------------\n')
 
 from collections import Counter
 def get_category_counts(anno):
@@ -57,7 +59,7 @@ def plot_category_nums(category_counts):
 
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("./experiments/chart/categroy_fr.png")
+    plt.savefig(save_path + "categroy_fr.png")
 
     # plot top 20
     topk = 20
@@ -74,7 +76,7 @@ def plot_category_nums(category_counts):
 
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("./experiments/chart/categroy_dist.png")
+    plt.savefig(save_path + "categroy_dist.png")
     plt.clf()
 
 
@@ -90,7 +92,7 @@ def plot_img_sizes(img_sizes):
     
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("./experiments/chart/image_size_dist.png")
+    plt.savefig(save_path + "image_size_dist.png")
     plt.clf()
 
 
@@ -105,7 +107,7 @@ def plot_bbox_areas(bbox_areas):
     
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("./experiments/chart/bbox_area.png")
+    plt.savefig(save_path + "bbox_area.png")
     plt.clf()
 
 
@@ -120,7 +122,7 @@ def plot_bbox_counts(bbox_counts):
     
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("./experiments/chart/object_per_img.png")
+    plt.savefig(save_path + "object_per_img.png")
     plt.clf()
 
 
@@ -149,46 +151,5 @@ def show_bbox(image_path, bboxes):
     plt.imshow(img)
     plt.axis('off')
     plt.tight_layout()
-    plt.savefig("bbox.png", bbox_inches='tight', pad_inches=0)
+    plt.savefig(save_path + "bbox.png", bbox_inches='tight', pad_inches=0)
     plt.clf()
-
-
-
-if __name__ == "__main__":
-    img_path = "./data/images/val2017/"
-    label_path = "./data/labels/annotations/"
-    train_file = "instances_train2017.json"
-    val_file = "instances_val2017.json"
-
-
-    from utils.preprocess import extract_person_data
-    extract_person_data(label_path, train_file)
-    extract_person_data(label_path, val_file)
-
-    train_file = "instances_train_person_only.json"
-    val_file = "instances_val_person_only.json"
-
-    import json
-    with open(label_path + val_file, 'r') as f:
-        annotations = json.load(f)
-    extract_annotations(annotations)
-   
-    # category_counts = get_category_counts(annotations)
-    # plot_category_nums(category_counts)
-    
-    img_sizes = get_img_sizes(annotations)
-    plot_img_sizes(img_sizes)
-    
-    bbox_areas = get_bbox_areas(annotations)
-    plot_bbox_areas(bbox_areas)
-    
-    bbox_counts = get_bbox_counts(annotations)
-    plot_bbox_counts(bbox_counts)
-
-    print(len(img_sizes))
-
-    image_id_to_info, image_id_to_bboxes = get_image_id_dict(annotations)
-    id = list(image_id_to_info.keys())[0]
-    show_bbox(img_path + image_id_to_info[id]['file_name'], image_id_to_bboxes[id])
-    
-

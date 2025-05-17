@@ -1,5 +1,6 @@
 from torchvision import datasets, transforms
 from torch.utils.data import DataLoader, Subset
+from src.utils import custom_collate_fn
 
 def get_custom_dataloaders(batch_size=64):
     transform = transforms.Compose([
@@ -7,12 +8,12 @@ def get_custom_dataloaders(batch_size=64):
         transforms.ToTensor(),
     ])
 
-    test_dataset = CustomDataset('./labels/annotations/instances_test_person_only.json', './images/val2017', transform=transform)
-    test_dataset = CustomDataset('./labels/annotations/instances_test_person_only.json', './images/val2017', transform=transform)
-    # train_dataset = Subset(train_dataset, range(64))
-    # test_dataset = Subset(test_dataset, range(64))
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True)
+    train_dataset = CustomDataset('./data/labels/annotations/instances_val_person_only.json', './data/images/val2017', transform=transform)
+    test_dataset = CustomDataset('./data/labels/annotations/instances_val_person_only.json', './data/images/val2017', transform=transform)
+    train_dataset = Subset(train_dataset, range(64))
+    test_dataset = Subset(test_dataset, range(64))
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True, collate_fn=custom_collate_fn)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True, collate_fn=custom_collate_fn)
 
     return train_loader, test_loader
 

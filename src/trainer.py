@@ -6,7 +6,8 @@ def train_one_epoch(network, dataloader, optimizer, criterion, device, amp_conte
     total_loss = 0
     
     for x_batch, t_batch in tqdm(dataloader, desc="Training", leave=False):
-        x_batch, t_batch = x_batch.to(device), t_batch.to(device)
+        # x_batch, t_batch = x_batch.to(device), t_batch.to(device)
+        x_batch = x_batch.to(device)
 
         optimizer.zero_grad()
         with amp_context:
@@ -32,7 +33,8 @@ def evaluate_loss(network, dataloader, criterion, device, amp_context=None):
 
     with torch.no_grad():
         for x_batch, t_batch in dataloader:
-            x_batch, t_batch = x_batch.to(device), t_batch.to(device)
+            # x_batch, t_batch = x_batch.to(device), t_batch.to(device)
+            x_batch = x_batch.to(device)
 
             with amp_context:
                 y_batch = network(x_batch)
@@ -50,7 +52,9 @@ def evaluate_accuracy(network, dataloader, device, amp_context=None):
 
     with torch.no_grad():
         for x_batch, t_batch in dataloader:
-            x_batch, t_batch = x_batch.to(device), t_batch.to(device)
+            # x_batch, t_batch = x_batch.to(device), t_batch.to(device)
+            x_batch = x_batch.to(device)
+
             with amp_context:
                 y_batch = network(x_batch)
             
