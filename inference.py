@@ -46,6 +46,7 @@ with torch.no_grad():
     for i, (images, _) in enumerate(test_loader):
         images = images.to(device)
         preds = network(images)  # [1, 16, 5]
+        preds[..., 4] = torch.sigmoid(preds[..., 4])
         draw_bboxes(images[0], preds[0], conf_threshold=0.5, save_path=f"outputs/pred_{i}.png")
         if i == 4:
             break  

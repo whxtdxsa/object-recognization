@@ -28,7 +28,6 @@ class SimpleDetector(nn.Module):
         out = out.mean(dim=[2, 3])  # [B, num_boxes * 5]
         out = out.view(B, self.num_boxes, 5)  # [B, N, 5] → (x, y, w, h, conf)
         out[..., :4] = torch.sigmoid(out[...,:4])
-        out[..., 4] = torch.sigmoid(out[...,4])
 
         return out
 
