@@ -8,6 +8,7 @@ from utils.preprocess import preprocess_image
 from utils.postprocess import non_max_suppression
 from utils.visualize import draw_detections
 from utils.coco import COCO_CLASSES  # 클래스 이름 리스트
+from utils.csv_writer import save_detections_to_csv
 
 def run_inference(input_dir='input', output_dir='output', weights='yolov5n.pt', device='cpu'):
     os.makedirs(output_dir, exist_ok=True)
@@ -37,3 +38,22 @@ def run_inference(input_dir='input', output_dir='output', weights='yolov5n.pt', 
 
 if __name__ == "__main__":
     run_inference()
+
+
+
+for file_name in sorted(image_files):
+    input_path = os.path.join(input_dir, file_name)
+    output_path = os.path.join(output_dir, file_name.replace('.', '_det.'))
+
+    img = cv2.imread(input_path)
+    if img is None:
+        continue
+
+    x = preprocess_image(img)
+    preds = model.predict(x)
+    detections = non_max_suppression(preds)[0]
+
+    img_with_boxes = draw_detections(img.copy(), detections, class_names=COCO_CLASSES)
+    cv2.imwrite(output_path, img_with_boxes)
+
+    save_detections_to_csv(csv_path, file_name, detections)

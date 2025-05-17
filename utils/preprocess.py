@@ -1,35 +1,32 @@
-import cv2
-import numpy as np
-import torch
+import os
+import json
+def extract_person_data(data_path, file_name):
+    
+    if 'train' in file_name: t = 'train'
+    else: t = 'val'
+    new_file_path = f"{data_path}instances_{t}_person_only.json"
 
-def preprocess_image(img: np.ndarray, img_size: int = 640) -> torch.Tensor:
-    """
-    img: 원본 BGR 이미지 (OpenCV 형식)
-    img_size: 모델 입력 사이즈 (기본 640)
-    return: torch.Tensor of shape (1, 3, img_size, img_size), normalized to 0~1
-    """
-    # Resize & pad (letterbox 방식, 비율 유지)
-    h0, w0 = img.shape[:2]  # 원본 이미지 크기
-    r = img_size / max(h0, w0)
-    new_unpad = (int(round(w0 * r)), int(round(h0 * r)))
-    img_resized = cv2.resize(img, new_unpad, interpolation=cv2.INTER_LINEAR)
+    if os.path.exists(new_file_path): 
+        print(new_file_path, 'already exists.')
+        return
 
-    dw, dh = img_size - new_unpad[0], img_size - new_unpad[1]
-    dw /= 2
-    dh /= 2
-    top, bottom = int(round(dh - 0.1)), int(round(dh + 0.1))
-    left, right = int(round(dw - 0.1)), int(round(dw + 0.1))
+    with open(data_path + file_name, 'r') as f:
+        coco = json.load(f)
 
-    img_padded = cv2.copyMakeBorder(img_resized, top, bottom, left, right, cv2.BORDER_CONSTANT, value=(114, 114, 114))
+    person_id = next(cat['id'] for cat in coco['categories'] if cat['name'] == 'person')
 
-    # BGR → RGB
-    img_rgb = cv2.cvtColor(img_padded, cv2.COLOR_BGR2RGB)
+    filtered_anns = [ann for ann in coco['annotations'] if ann['category_id'] == person_id]
 
-    # HWC → CHW
-    img_chw = img_rgb.transpose((2, 0, 1))
+    valid_image_ids = set(ann['image_id'] for ann in filtered_anns)
+    filtered_images = [img for img in coco['images'] if img['id'] in valid_image_ids]
 
-    # Normalize and convert to float32 tensor
-    img_tensor = torch.from_numpy(img_chw).float() / 255.0
+    filtered_coco = {
+        'images': filtered_images,
+        'annotations': filtered_anns,
+        'categories': [cat for cat in coco['categories'] if cat['id'] == person_id]
+    }
 
-    # Add batch dimension
-    return img_tensor.unsqueeze(0)  # shape: (1, 3, img_size, img_size)
+    with open(new_file_path, 'w') as f:
+        json.dump(filtered_coco, f)
+
+
