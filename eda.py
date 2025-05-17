@@ -57,7 +57,7 @@ def plot_category_nums(category_counts):
 
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("categroy_fr.png")
+    plt.savefig("./experiments/chart/categroy_fr.png")
 
     # plot top 20
     topk = 20
@@ -74,7 +74,7 @@ def plot_category_nums(category_counts):
 
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("categroy_dist.png")
+    plt.savefig("./experiments/chart/categroy_dist.png")
     plt.clf()
 
 
@@ -90,7 +90,7 @@ def plot_img_sizes(img_sizes):
     
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("image_size_dist.png")
+    plt.savefig("./experiments/chart/image_size_dist.png")
     plt.clf()
 
 
@@ -105,7 +105,7 @@ def plot_bbox_areas(bbox_areas):
     
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("area.png")
+    plt.savefig("./experiments/chart/bbox_area.png")
     plt.clf()
 
 
@@ -120,7 +120,7 @@ def plot_bbox_counts(bbox_counts):
     
     plt.grid(True)
     plt.tight_layout()
-    plt.savefig("nofobject.png")
+    plt.savefig("./experiments/chart/object_per_img.png")
     plt.clf()
 
 
