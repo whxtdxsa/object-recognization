@@ -33,6 +33,12 @@ amp_context, scaler = get_amp_components(device)
 # --------------------------
 from src.eda import *
 import json
+with open(label_path + train_file, 'r') as f:
+    annotations_t = json.load(f)
+
+img_sizes = get_img_sizes(annotations_t)
+print(len(img_sizes))
+
 with open(label_path + val_file, 'r') as f:
     annotations = json.load(f)
 
@@ -58,7 +64,7 @@ show_bbox(img_val_path + image_id_to_info[id]['file_name'], image_id_to_bboxes[i
 # Define Params
 # --------------------------
 # HyperParams
-batch_size = 16
+batch_size = 128
 epochs = 5
 lr = 0.1
 
