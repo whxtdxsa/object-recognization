@@ -62,10 +62,13 @@ class CustomDataset(Dataset):
         bboxes = []
         for ann in anns:
             x, y, bw, bh = ann['bbox']
-            norm_x = (x * scale + pad_x) / 640
-            norm_y = (y * scale + pad_y) / 640
-            norm_w = bw * scale / 640
-            norm_h = bh * scale / 640
+            w_letter = bw * scale
+            h_letter = bh * scale
+
+            norm_x = ((x * scale + pad_x) + (w_letter / 2.0)) / 640
+            norm_y = ((y * scale + pad_y) + (h_letter / 2.0)) / 640
+            norm_w = w_letter / 640
+            norm_h = h_letter / 640
             bboxes.append([norm_x, norm_y, norm_w, norm_h])
 
         if self.transform:
