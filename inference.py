@@ -17,7 +17,7 @@ from src.loader import get_custom_dataloaders
 _, test_loader = get_custom_dataloaders(batch_size=10) 
 
 network.to(device)
-network.load_state_dict(torch.load("weights/bs128_ep3_lr0.0004/e_2.pt", map_location=device))
+network.load_state_dict(torch.load("weights/bs128_ep3_lr0.0004/e_1.pt", map_location=device))
 network.eval()
 
 from src.utils import draw_bboxes
@@ -26,7 +26,7 @@ with torch.no_grad():
         images = images.to(device)
         preds = network(images)  # [1, 16, 5]
 
-        draw_bboxes(images[0], preds[0], conf_threshold=0.7, save_path=f"outputs/pred_{i}.png")
+        draw_bboxes(images[0], preds[0], conf_threshold=0.1, save_path=f"outputs/pred_{i}.png")
         if i == 9:
             break  
 
