@@ -17,7 +17,7 @@ from src.loader import get_custom_dataloaders
 _, test_loader = get_custom_dataloaders(batch_size=10) 
 
 network.to(device)
-network.load_state_dict(torch.load("weights/bs128_ep3_lr0.0004/e_2.pt", map_location=device))
+network.load_state_dict(torch.load("weights/bs128_ep3_lr0.0004/e_3.pt", map_location=device))
 network.eval()
 
 from src.utils import draw_bboxes
