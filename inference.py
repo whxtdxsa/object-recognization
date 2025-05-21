@@ -26,7 +26,7 @@ with torch.no_grad():
         images = images.to(device)
         preds = network(images)  # [1, 16, 5]
 
-        draw_bboxes(images[0], preds[0], conf_threshold=0.8, save_path=f"outputs/pred_{i}.png")
+        draw_bboxes(images[0], preds[0], conf_threshold=1.8, save_path=f"outputs/pred_{i}.png")
         if i == 9:
             break  
 
