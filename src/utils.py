@@ -48,7 +48,6 @@ import torchvision.transforms.functional as F
 import os
 
 def draw_bboxes(image_tensor, pred_tensor, conf_threshold=0.1, save_path="output.jpg"):
-    pred_tensor[:,:4] = box_cxcywh_to_xyxy(pred_tensor[:,:4])
     pred_tensor[:,4] = torch.sigmoid(pred_tensor[:,4])
     img = F.to_pil_image(image_tensor.cpu())
     draw = ImageDraw.Draw(img)
