@@ -82,7 +82,7 @@ class DetectionLoss(nn.Module):
         else:
             final_box_loss = torch.tensor(0.0, device=preds[0].device)
         total_loss += self.lambda_conf * final_conf_loss + self.lambda_box * final_box_loss
-        if torch.rand(1).item() < 0.1:
+        if torch.rand(1).item() < 0.01:
             print(f"[DEBUG] conf_loss: {final_conf_loss.item()}")
             print(f"[DEBUG] box_loss: {final_box_loss.item()}")
             print(f"[DEBUG] total_loss: {total_loss.item()}")

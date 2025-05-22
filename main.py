@@ -65,12 +65,12 @@ amp_context, scaler = get_amp_components(device)
 # --------------------------
 # HyperParams
 batch_size = 128
-epochs = 22
-lr = 0.0004
+epochs = 3
+lr = 0.0001
 
 experiment_name = f"bs{batch_size}_ep{epochs}_lr{lr}"
-start_ep = 3
-weight_path = "bs128_ep3_lr0.0004"
+start_ep = 30
+weight_path = "bs128_ep30_lr0.0001"
 
 import os
 def make_dir_if_not_exists(path):
@@ -115,7 +115,7 @@ for epoch in range(1, epochs + 1):
 
 # Logging
 from src.utils import init_csv_log, log_to_csv
-log_path = f"experiments/{experiment_name}/metrics.csv"
+log_path = f"experiments/{experiment_name}/metrics_{epochs + start_ep}.csv"
 
 init_csv_log(log_path, ["epoch", "train_loss", "test_loss"])
 for epoch in range(len(train_losses)):
