@@ -48,13 +48,13 @@ import torchvision.transforms.functional as F
 import os
 
 def draw_bboxes(image_tensor, pred_tensor, conf_threshold=0.1, save_path="output.jpg"):
-    pred_tensor[:,4] = torch.sigmoid(pred_tensor[:,4])
+    # pred_tensor[:,4] = torch.sigmoid(pred_tensor[:,4])
     img = F.to_pil_image(image_tensor.cpu())
     draw = ImageDraw.Draw(img)
     for box in pred_tensor:
         cx, cy, w, h, conf = box.tolist()
-        # if conf < conf_threshold:
-        #    continue
+        if conf < conf_threshold:
+            continue
         center_x_pixel = cx * img.width
         center_y_pixel = cy * img.height
         width_pixel = w * img.width
@@ -78,3 +78,76 @@ def box_cxcywh_to_xyxy(boxes):
     x2 = x_c + w / 2
     y2 = y_c + h / 2
     return torch.stack([x1, y1, x2, y2], dim=1)
+
+import torch
+import torchvision # torchvision.ops.nms를 위해 import
+
+# 유틸리티 함수 (사용자 제공 코드)
+def box_cxcywh_to_xyxy(boxes: torch.Tensor) -> torch.Tensor:
+    """ cx,cy,w,h 형식의 박스를 x1,y1,x2,y2 형식으로 변환합니다. """
+    # 입력 boxes는 [N, 4] 형태라고 가정
+    x_c, y_c, w, h = boxes.unbind(dim=-1) # 마지막 차원을 기준으로 unbind (더 강건함)
+    x1 = x_c - w / 2
+    y1 = y_c - h / 2
+    x2 = x_c + w / 2
+    y2 = y_c + h / 2
+    return torch.stack([x1, y1, x2, y2], dim=-1) # 마지막 차원을 기준으로 stack
+
+def postprocess_single_image_predictions(
+    raw_preds_single_image: torch.Tensor,
+    conf_threshold_nms_candidate: float = 0.05,
+    iou_threshold_nms: float = 0.45
+):
+    """
+    단일 이미지에 대한 모델의 원시 예측값을 후처리하여 NMS를 적용합니다.
+
+    Args:
+        raw_preds_single_image (torch.Tensor): [N, 5] 형태의 텐서.
+            각 행은 [cx_norm, cy_norm, w_norm, h_norm, conf_logit].
+        conf_threshold_nms_candidate (float): NMS를 적용하기 전에 사용할 1차 신뢰도 임계값.
+                                               이 값 이상인 박스들만 NMS 대상으로 고려됩니다.
+        iou_threshold_nms (float): NMS에 사용할 IoU 임계값.
+
+    Returns:
+        torch.Tensor: [M, 5] 형태의 텐서. NMS를 통과한 최종 검출 결과.
+                      각 행은 [cx_norm, cy_norm, w_norm, h_norm, conf_probability].
+                      NMS를 통과한 박스가 없으면 빈 텐서가 반환됩니다.
+    """
+    if raw_preds_single_image.numel() == 0:
+        return torch.empty((0, 5), device=raw_preds_single_image.device, dtype=raw_preds_single_image.dtype)
+
+    # 1. 좌표와 신뢰도 로짓 분리 및 신뢰도 확률 변환
+    boxes_cxcywh_norm = raw_preds_single_image[:, :4]  # [N, 4]
+    conf_logits = raw_preds_single_image[:, 4]         # [N]
+    conf_probs = torch.sigmoid(conf_logits)            # [N]
+
+    # 2. 1차 신뢰도 필터링 (NMS 후보 선정)
+    candidate_indices = torch.where(conf_probs >= conf_threshold_nms_candidate)[0]
+
+    if candidate_indices.numel() == 0: # 후보 박스가 없는 경우
+        return torch.empty((0, 5), device=raw_preds_single_image.device, dtype=raw_preds_single_image.dtype)
+
+    candidate_boxes_cxcywh = boxes_cxcywh_norm[candidate_indices] # [K, 4]
+    candidate_scores = conf_probs[candidate_indices]              # [K]
+
+    # 3. NMS를 위해 박스 형식을 xyxy로 변환
+    candidate_boxes_xyxy = box_cxcywh_to_xyxy(candidate_boxes_cxcywh) # [K, 4]
+
+    # 4. NMS 적용
+    keep_indices = torchvision.ops.nms(candidate_boxes_xyxy, candidate_scores, iou_threshold_nms) # [M] (M <= K)
+
+    # 5. NMS를 통과한 최종 박스와 점수 선택 (좌표는 원래의 cxcywh 형식 유지)
+    final_boxes_cxcywh = candidate_boxes_cxcywh[keep_indices]
+    final_scores = candidate_scores[keep_indices]
+
+    if final_boxes_cxcywh.numel() == 0: # NMS 후 남은 박스가 없는 경우
+        return torch.empty((0, 5), device=raw_preds_single_image.device, dtype=raw_preds_single_image.dtype)
+
+    # 6. 최종 결과를 [M, 5] 형태로 재구성 ([cx,cy,w,h, conf_prob])
+    final_detections = torch.cat([
+        final_boxes_cxcywh,
+        final_scores.unsqueeze(-1) # [M, 1] 형태로 변경
+    ], dim=-1)
+
+    return final_detections
+

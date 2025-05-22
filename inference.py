@@ -20,13 +20,14 @@ network.to(device)
 network.load_state_dict(torch.load("weights/bs128_ep3_lr0.0004/e_3.pt", map_location=device))
 network.eval()
 
-from src.utils import draw_bboxes
+from src.utils import draw_bboxes, postprocess_single_image
 with torch.no_grad():
     for i, (images, _) in enumerate(test_loader):
         images = images.to(device)
         preds = network(images)  # [1, 16, 5]
+        pred = postprocess_single_image(preds[0])
 
-        draw_bboxes(images[0], preds[0], conf_threshold=0.1, save_path=f"outputs/pred_{i}.png")
+        draw_bboxes(images[0], pred, conf_threshold=0.1, save_path=f"outputs/pred_{i}.png")
         if i == 9:
             break  
 
