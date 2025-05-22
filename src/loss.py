@@ -71,7 +71,7 @@ class DetectionLoss(nn.Module):
                 accumulated_box_loss += box_loss
                 num_images_with_positives_for_box_loss += 1
         
-            if torch.rand(1).item() < 0.002:
+            if torch.rand(1).item() < 0.0005:
                 print(f"[DEBUG] conf_target > 0: {(conf_target > 0).sum().item()} / {len(conf_target)}")
                 print(f"conf_target mean: {conf_target.mean().item():.4f}")
                 print(f"[DEBUG] pred_conf range: min={pred_conf_logits.min().item():.3f}, max={pred_conf_logits.max().item():.3f}")
@@ -82,5 +82,9 @@ class DetectionLoss(nn.Module):
         else:
             final_box_loss = torch.tensor(0.0, device=preds[0].device)
         total_loss += self.lambda_conf * final_conf_loss + self.lambda_box * final_box_loss
+        if torch.rand(1).item() < 0.1:
+            print(f"[DEBUG] conf_loss: {final_conf_loss.item()}")
+            print(f"[DEBUG] box_loss: {final_box_loss.item()}")
+            print(f"[DEBUG] total_loss: {total_loss.item()}")
 
         return total_loss

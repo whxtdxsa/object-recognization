@@ -65,12 +65,12 @@ amp_context, scaler = get_amp_components(device)
 # --------------------------
 # HyperParams
 batch_size = 128
-epochs = 3
+epochs = 22
 lr = 0.0004
 
 experiment_name = f"bs{batch_size}_ep{epochs}_lr{lr}"
-start_ep = 0
-weight_path = "bs32_ep10_lr0.0002"
+start_ep = 3
+weight_path = "bs128_ep3_lr0.0004"
 
 import os
 def make_dir_if_not_exists(path):
