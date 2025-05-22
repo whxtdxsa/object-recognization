@@ -53,8 +53,8 @@ def draw_bboxes(image_tensor, pred_tensor, conf_threshold=0.1, save_path="output
     draw = ImageDraw.Draw(img)
     for box in pred_tensor:
         cx, cy, w, h, conf = box.tolist()
-        if conf < conf_threshold:
-            continue
+        # if conf < conf_threshold:
+        #    continue
         center_x_pixel = cx * img.width
         center_y_pixel = cy * img.height
         width_pixel = w * img.width
