@@ -4,6 +4,7 @@ from torch.utils.data import DataLoader, Subset
 import albumentations as A
 from albumentations.pytorch import ToTensorV2
 import cv2
+import numpy as np
 
 def custom_collate_fn(batch):
     images = [item[0] for item in batch]
@@ -24,7 +25,7 @@ def get_custom_dataloaders(batch_size=128):
             value=[128, 128, 128]
         ),
         A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.3),
-        A.HueSaturationValue(hue_shift_limit=15, sat_shift_limit=25, val_shift_limit=20, g_shift_limit=20, b_shift_limit=20, p=0.2),
+        A.HueSaturationValue(hue_shift_limit=15, sat_shift_limit=25, val_shift_limit=20, p=0.2),
         A.GaussNoise(var_limit=(10.0, 50.0), p=0.2),
         A.OneOf([
             A.Blur(blur_limit=3, p=1.0),
