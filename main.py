@@ -69,7 +69,7 @@ epochs = 10
 lr = 0.0001
 
 experiment_name = f"bs{batch_size}_ep{epochs}_lr{lr}"
-start_ep = 43
+start_ep = 63
 weight_path = "bs128_ep10_lr0.0001"
 
 import os
