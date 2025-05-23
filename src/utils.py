@@ -151,3 +151,9 @@ def postprocess_single_image_predictions(
 
     return final_detections
 
+def set_backbone_requires_grad(model, requires_grad: bool = False):
+    for name, param in model.named_parameters():
+        if any(layer in name for layer in ['layer2', 'layer3', 'layer4']):
+            param.requires_grad = requires_grad
+        if 'layer1' in name:
+            param.requires_grad = False  # 항상 고정

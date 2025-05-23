@@ -66,11 +66,11 @@ amp_context, scaler = get_amp_components(device)
 # HyperParams
 batch_size = 128
 epochs = 10
-lr = 0.0001
+lr = 0.00012
 
 experiment_name = f"bs{batch_size}_ep{epochs}_lr{lr}"
-start_ep = 63
-weight_path = "bs128_ep10_lr0.0001"
+start_ep = 70
+weight_path = "bs128_ep10_lr0.00012"
 
 import os
 def make_dir_if_not_exists(path):
@@ -80,13 +80,17 @@ make_dir_if_not_exists(f"weights/{experiment_name}")
 # Model, Criterion, Optimizer
 from src.model import SimpleDetector
 from src.loss import DetectionLoss
+from src.utils import set_backbone_requires_grad
 network = SimpleDetector()
 criterion = DetectionLoss()
 optimizer = optim.AdamW(network.parameters(), lr=lr, weight_decay=1e-4)
 
 if start_ep != 0:
     network.load_state_dict(torch.load(f"./weights/{weight_path}/e_{start_ep}.pt", map_location=device))
-
+set_backbone_requires_grad(network, requires_grad=False)
+# 현재 학습 중인 파라미터 수 확인
+num_trainable = sum(p.numel() for p in network.parameters() if p.requires_grad)
+print(f"[INFO] Trainable parameters: {num_trainable}")
 # --------------------------
 # Define Train Procedure
 # --------------------------
