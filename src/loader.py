@@ -19,8 +19,8 @@ def get_custom_dataloaders(batch_size=64):
     train_dataset = Subset(train_dataset, range(60000))
     test_dataset = Subset(test_dataset, range(1000))
     
-    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=4, pin_memory=True, collate_fn=custom_collate_fn)
-    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=4, pin_memory=True, collate_fn=custom_collate_fn)
+    train_loader = DataLoader(train_dataset, batch_size=batch_size, shuffle=True, num_workers=8, pin_memory=True, collate_fn=custom_collate_fn)
+    test_loader = DataLoader(test_dataset, batch_size=batch_size, shuffle=False, num_workers=8, pin_memory=True, collate_fn=custom_collate_fn)
 
     return train_loader, test_loader
 

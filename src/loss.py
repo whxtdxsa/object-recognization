@@ -26,7 +26,7 @@ class FocalLoss(nn.Module):
             return focal_loss
 
 class DetectionLoss(nn.Module):
-    def __init__(self, lambda_box=7.5, lambda_conf=1.0, iou_thresh=0.3, use_focal_loss=True, focal_alpha=0.25, focal_gamma=2.0):
+    def __init__(self, lambda_box=7.5, lambda_conf=1.0, iou_thresh=0.5, use_focal_loss=True, focal_alpha=0.25, focal_gamma=2.0):
         super().__init__()
         self.lambda_box = lambda_box
         self.lambda_conf = lambda_conf
