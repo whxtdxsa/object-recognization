@@ -1,10 +1,15 @@
-import torch
-from torchvision import datasets
-from torch.utils.data import DataLoader, Subset
+import json
+import os
+
 import albumentations as A
-from albumentations.pytorch import ToTensorV2
 import cv2
 import numpy as np
+from PIL import Image
+import torch
+from albumentations.pytorch import ToTensorV2
+from torch.utils.data import DataLoader, Dataset, Subset
+from torchvision import datasets
+
 
 def custom_collate_fn(batch):
     images = [item[0] for item in batch]
@@ -12,9 +17,29 @@ def custom_collate_fn(batch):
     images = torch.stack(images, dim=0)
     return images, targets
 
-def get_custom_dataloaders(batch_size=128):
+def get_custom_dataloaders(
+    train_ann_path,
+    train_img_dir,
+    val_ann_path,
+    val_img_dir,
+    batch_size=128, input_size=(640, 640)
+):
+    IMG_WIDTH, IMG_HEIGHT = input_size
+    letterbox_fill_color = (128, 128, 128)
+
     train_transform = A.Compose([
-        A.RandomSizedBBoxSafeCrop(width=640, height=640, erosion_rate=0.1, p=0.5),
+        # Letter Box
+        A.LongestMaxSize(max_size=max(IMG_WIDTH, IMG_HEIGHT), p=1.0),
+        A.PadIfNeeded(
+            min_width=IMG_WIDTH,
+            min_height=IMG_HEIGHT,
+            border_mode=cv2.BORDER_CONSTANT,
+            value=letterbox_fill_color,
+            p=1.0
+        ),
+
+        # Augmentations
+        A.RandomSizedBBoxSafeCrop(width=IMG_WIDTH, height=IMG_HEIGHT, erosion_rate=0.1, p=0.5),
         A.HorizontalFlip(p=0.5),
         A.ShiftScaleRotate(
             shift_limit=0.0625,
@@ -22,7 +47,7 @@ def get_custom_dataloaders(batch_size=128):
             rotate_limit=15,
             p=0.7,
             border_mode=cv2.BORDER_CONSTANT,
-            value=[128, 128, 128]
+            value=letterbox_fill_color
         ),
         A.RandomBrightnessContrast(brightness_limit=0.2, contrast_limit=0.2, p=0.3),
         A.HueSaturationValue(hue_shift_limit=15, sat_shift_limit=25, val_shift_limit=20, p=0.2),
@@ -40,15 +65,22 @@ def get_custom_dataloaders(batch_size=128):
         min_visibility=0.1,
         min_area=100
     ))
+
     val_transform = A.Compose([
+        # Letter Box
+        A.LongestMaxSize(max_size=max(IMG_WIDTH, IMG_HEIGHT), p=1.0),
+        A.PadIfNeeded(
+            min_width=IMG_WIDTH,
+            min_height=IMG_HEIGHT,
+            border_mode=cv2.BORDER_CONSTANT,
+            value=letterbox_fill_color,
+            p=1.0
+        ),
         ToTensorV2()
     ], bbox_params=A.BboxParams(format='yolo', label_fields=['category_ids']))
 
-
-
-
-    train_dataset = CustomDataset('./data/labels/annotations/instances_train_person_only.json', './data/images/train2017', transform=train_transform)
-    test_dataset = CustomDataset('./data/labels/annotations/instances_val_person_only.json', './data/images/val2017', transform=val_transform)
+    train_dataset = CustomDataset(train_ann_path, train_img_dir, transform=train_transform)
+    test_dataset = CustomDataset(val_ann_path, val_img_dir, transform=val_transform)
 
     train_dataset = Subset(train_dataset, range(60000))
     test_dataset = Subset(test_dataset, range(1000))
@@ -59,11 +91,6 @@ def get_custom_dataloaders(batch_size=128):
     return train_loader, test_loader
 
 
-from torch.utils.data import Dataset
-from PIL import Image
-import json
-import os
-
 class CustomDataset(Dataset):
     def __init__(self, annotation_path, image_dir, transform=None):
         with open(annotation_path, 'r') as f:
@@ -73,9 +100,9 @@ class CustomDataset(Dataset):
         self.transform = transform
 
         self.image_id_to_filename = {img['id']: img['file_name'] for img in self.coco['images']}
-        self.annotations = self.coco['annotations']
+        self.image_id_to_dims = {img['id']: (img['width'], img['height']) for img in self.coco['images']}
 
-        # 이미지별 annotation 모으기
+        self.annotations = self.coco['annotations']
         self.image_to_anns = {}
         for ann in self.annotations:
             self.image_to_anns.setdefault(ann['image_id'], []).append(ann)
@@ -87,43 +114,35 @@ class CustomDataset(Dataset):
 
     def __getitem__(self, idx):
         image_id = self.image_ids[idx]
-        image_path = os.path.join(self.image_dir, self.image_id_to_filename[image_id])
-        img = Image.open(image_path).convert("RGB")
-
-        img, scale, pad_x, pad_y = letterbox_image(img, target_size=(640, 640))
-        img_np = np.array(img)
+        image_filename = self.image_id_to_filename[image_id]
+        image_path = os.path.join(self.image_dir, image_filename)
         
+        img_pil = Image.open(image_path).convert("RGB")
+        img_np = np.array(img_pil)
+        
+        original_width, original_height = self.image_id_to_dims[image_id]
+
         anns = self.image_to_anns.get(image_id, [])
         bboxes = []
         category_ids = []
+        
         for ann in anns:
-            x, y, bw, bh = ann['bbox']
-            w_letter = bw * scale
-            h_letter = bh * scale
+            x, y, w, h = ann['bbox']
 
-            norm_x = ((x * scale + pad_x) + (w_letter / 2.0)) / 640
-            norm_y = ((y * scale + pad_y) + (h_letter / 2.0)) / 640
-            norm_w = w_letter / 640
-            norm_h = h_letter / 640
+            norm_x = (x + w / 2) / original_width
+            norm_y = (y + h / 2) / original_height
+            norm_w = w / original_width
+            norm_h = h / original_height
+
             bboxes.append([norm_x, norm_y, norm_w, norm_h])
             category_ids.append(0)
         
         transformed = self.transform(image=img_np, bboxes=bboxes, category_ids=category_ids)
         img_transformed_tensor = transformed['image']
         transformed_bboxes = transformed['bboxes']
-        target = torch.tensor(transformed_bboxes, dtype=torch.float32)
+        if not final_bboxes:
+            target = torch.empty((0, 4), dtype=torch.float32)
+        else:
+            target = torch.tensor(transformed_bboxes, dtype=torch.float32)
 
         return img_transformed_tensor, target
-
-def letterbox_image(image, target_size=(640, 640), fill_color=(128, 128, 128)):
-    iw, ih = image.size
-    w, h = target_size
-    scale = min(w / iw, h / ih)
-    nw, nh = int(iw * scale), int(ih * scale)
-
-    image_resized = image.resize((nw, nh), Image.BICUBIC)
-    new_image = Image.new('RGB', (w, h), fill_color)
-    pad_x = (w - nw) // 2
-    pad_y = (h - nh) // 2
-    new_image.paste(image_resized, (pad_x, pad_y))
-    return new_image, scale, pad_x, pad_y
