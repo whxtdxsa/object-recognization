@@ -142,7 +142,6 @@ def get_image_id_dict(anno):
     return image_id_to_info, image_id_to_bboxes
 
 
-from PIL import Image, ImageDraw
 def show_bbox(image_path, bboxes):
     img = Image.open(image_path)
     draw = ImageDraw.Draw(img)

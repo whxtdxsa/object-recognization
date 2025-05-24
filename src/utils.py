@@ -1,8 +1,15 @@
-import random
-import numpy as np
-import torch
-import os
 import csv
+import os
+
+import torchvision.transforms.functional as F
+import numpy as np
+from contextlib import nullcontext
+from PIL import ImageDraw
+import random
+import torch
+import torchvision 
+
+
 def make_dir_if_not_exists(path):
     if not os.path.exists(path):
         os.makedirs(path)
@@ -25,15 +32,7 @@ def log_to_csv(path, data_dict):
         writer = csv.DictWriter(f, fieldnames=data_dict.keys())
         writer.writerow(data_dict)
 
-from contextlib import nullcontext
-
 def get_amp_components(device):
-    """
-    device (torch.device): 'cuda' or 'cpu'
-    return:
-        amp_context: autocast context or nullcontext
-        scaler: GradScaler or None
-    """
     if device.type == 'cuda':
         from torch.amp import autocast
         from torch.cuda.amp import GradScaler
@@ -43,12 +42,6 @@ def get_amp_components(device):
         amp_context = nullcontext()
         scaler = None
     return amp_context, scaler
-
-
-
-from PIL import ImageDraw
-import torchvision.transforms.functional as F
-import os
 
 def draw_bboxes(image_tensor, pred_tensor, conf_threshold=0.1, save_path="output.jpg"):
     # pred_tensor[:,4] = torch.sigmoid(pred_tensor[:,4])
@@ -82,19 +75,13 @@ def box_cxcywh_to_xyxy(boxes):
     y2 = y_c + h / 2
     return torch.stack([x1, y1, x2, y2], dim=1)
 
-import torch
-import torchvision # torchvision.ops.nms를 위해 import
-
-# 유틸리티 함수 (사용자 제공 코드)
 def box_cxcywh_to_xyxy(boxes: torch.Tensor) -> torch.Tensor:
-    """ cx,cy,w,h 형식의 박스를 x1,y1,x2,y2 형식으로 변환합니다. """
-    # 입력 boxes는 [N, 4] 형태라고 가정
-    x_c, y_c, w, h = boxes.unbind(dim=-1) # 마지막 차원을 기준으로 unbind (더 강건함)
+    x_c, y_c, w, h = boxes.unbind(dim=-1) 
     x1 = x_c - w / 2
     y1 = y_c - h / 2
     x2 = x_c + w / 2
     y2 = y_c + h / 2
-    return torch.stack([x1, y1, x2, y2], dim=-1) # 마지막 차원을 기준으로 stack
+    return torch.stack([x1, y1, x2, y2], dim=-1) 
 
 def postprocess_single_image_predictions(
     raw_preds_single_image: torch.Tensor,
