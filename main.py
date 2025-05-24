@@ -147,7 +147,7 @@ init_csv_log(log_path, log_fieldnames)
 
 for i in range(config["training"]["epochs_to_run_this_session"]):
     epoch = current_start_epoch + i + 1
-    print(f"Epoch {epoch}/{current_start_epoch + 1 + config['training']['epochs_to_run_this_session']}")
+    print(f"Epoch {epoch}/{current_start_epoch + config['training']['epochs_to_run_this_session']}")
     train_loss = train_one_epoch(network, train_loader, optimizer, criterion, device, amp_context, scaler)
     test_loss = evaluate_loss(network, test_loader, criterion, device, amp_context)
 
