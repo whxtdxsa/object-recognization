@@ -140,39 +140,39 @@ class CustomDataset(Dataset):
 
             bboxes.append([norm_x, norm_y, norm_w, norm_h])
             category_ids.append(0)
-     # src/loader.py의 CustomDataset 내 __getitem__ 메서드 수정
-    problematic_bboxes_for_debug = []
-    for i, bbox_coords in enumerate(initial_yolo_bboxes):
-        # 각 좌표가 (0, 1] 범위를 만족하는지 확인
-        if not all(0.0 < coord <= 1.0 for coord in bbox_coords):
-            problematic_bboxes_for_debug.append({
-                "original_coco": anns[i]['bbox'], # 원본 COCO 박스
-                "calculated_yolo": bbox_coords,   # 계산된 YOLO 박스
-                "image_id": image_id,
-                "image_path": image_path,
-                "original_dims": (original_width, original_height)
-            })
+        # src/loader.py의 CustomDataset 내 __getitem__ 메서드 수정
+        problematic_bboxes_for_debug = []
+        for i, bbox_coords in enumerate(initial_yolo_bboxes):
+            # 각 좌표가 (0, 1] 범위를 만족하는지 확인
+            if not all(0.0 < coord <= 1.0 for coord in bbox_coords):
+                problematic_bboxes_for_debug.append({
+                    "original_coco": anns[i]['bbox'], # 원본 COCO 박스
+                    "calculated_yolo": bbox_coords,   # 계산된 YOLO 박스
+                    "image_id": image_id,
+                    "image_path": image_path,
+                    "original_dims": (original_width, original_height)
+                })
 
-    if problematic_bboxes_for_debug:
-        print(f"DEBUG: Found bboxes not in (0, 1] range for image_id {image_id}:")
-        for info in problematic_bboxes_for_debug:
-            print(f"  Image: {info['image_path']}, OrigDims: {info['original_dims']}")
-            print(f"  Orig COCO: {info['original_coco']}, Calc YOLO: {info['calculated_yolo']}")
-        # 여기서 에러를 발생시키거나, 특정 조건으로 필터링할 수 있습니다.
-        # raise ValueError(f"Problematic YOLO bbox calculated for image_id {image_id}") # 디버깅을 위해 강제 에러
+        if problematic_bboxes_for_debug:
+            print(f"DEBUG: Found bboxes not in (0, 1] range for image_id {image_id}:")
+            for info in problematic_bboxes_for_debug:
+                print(f"  Image: {info['image_path']}, OrigDims: {info['original_dims']}")
+                print(f"  Orig COCO: {info['original_coco']}, Calc YOLO: {info['calculated_yolo']}")
+            # 여기서 에러를 발생시키거나, 특정 조건으로 필터링할 수 있습니다.
+            # raise ValueError(f"Problematic YOLO bbox calculated for image_id {image_id}") # 디버깅을 위해 강제 에러
 
-    try:
-        transformed = self.transform(image=img_np, bboxes=initial_yolo_bboxes, category_ids=category_ids)
-    except ValueError as e:
-        if "In YOLO format all coordinates must be float and in range (0, 1]" in str(e):
-            print(f"--- Albumentations ValueError Caught ---")
-            print(f"Image ID: {image_id}, Path: {image_path}")
-            print(f"Original Dims (W, H): ({original_width}, {original_height})")
-            print("Initial YOLO BBoxes passed to Albumentations:")
-            for i, bbox_item in enumerate(initial_yolo_bboxes):
-                print(f"  Idx {i}: {bbox_item} (Original COCO: {anns[i]['bbox'] if i < len(anns) else 'N/A'})")
-            print("--- End of Debug Info ---")
-        raise e # 원래 에러를 다시 발생시켜 학습 중단
+        try:
+            transformed = self.transform(image=img_np, bboxes=initial_yolo_bboxes, category_ids=category_ids)
+        except ValueError as e:
+            if "In YOLO format all coordinates must be float and in range (0, 1]" in str(e):
+                print(f"--- Albumentations ValueError Caught ---")
+                print(f"Image ID: {image_id}, Path: {image_path}")
+                print(f"Original Dims (W, H): ({original_width}, {original_height})")
+                print("Initial YOLO BBoxes passed to Albumentations:")
+                for i, bbox_item in enumerate(initial_yolo_bboxes):
+                    print(f"  Idx {i}: {bbox_item} (Original COCO: {anns[i]['bbox'] if i < len(anns) else 'N/A'})")
+                print("--- End of Debug Info ---")
+            raise e # 원래 에러를 다시 발생시켜 학습 중단
             
         transformed = self.transform(image=img_np, bboxes=bboxes, category_ids=category_ids)
         img_transformed_tensor = transformed['image']
