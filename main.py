@@ -45,7 +45,7 @@ config = {
     },
     "experiment_name_template": "bs{bs}_lr{lr}",
     "weights_dir_base": "weights",
-    "logs_dir_base": "experiments""
+    "logs_dir_base": "experiments"
 }
 experiment_name = config["experiment_name_template"].format(bs=config["training"]["batch_size"], lr=config["training"]["lr"])
 
@@ -54,15 +54,15 @@ train_img_dir = os.path.join(config["data"]["base_dir"], config["data"]["train_i
 val_img_dir = os.path.join(config["data"]["base_dir"], config["data"]["val_img_subdir"])
 label_dir = os.path.join(config["data"]["base_dir"], config["data"]["label_subdir"])
 
-train_ann_path_original = os.path.join(label_dir, config["data"]["train_ann_path_original"])
-val_ann_path_original = os.path.join(label_dir, config["data"]["val_ann_path_original"])
+train_ann_path_original = os.path.join(label_dir, config["data"]["train_ann_file_original"])
+val_ann_path_original = os.path.join(label_dir, config["data"]["val_ann_file_original"])
 
-train_ann_path_person_only = os.path.join(label_dir, config["data"]["train_ann_path_person_only"])
-val_ann_path_person_only = os.path.join(label_dir, config["data"]["val_ann_path_person_only"])
+train_ann_path_person_only = os.path.join(label_dir, config["data"]["train_ann_file_person_only"])
+val_ann_path_person_only = os.path.join(label_dir, config["data"]["val_ann_file_person_only"])
 
 weights_dir = os.path.join(config["weights_dir_base"], experiment_name)
 log_dir = os.path.join(config["logs_dir_base"], experiment_name)   
-log_fieldnames = ["epoch", "train_loss", "test_loss""]
+log_fieldnames = ["epoch", "train_loss", "test_loss"]
 
 os.makedirs(weights_dir, exist_ok=True)
 os.makedirs(log_dir, exist_ok=True)
@@ -89,7 +89,7 @@ if not os.path.exists(val_ann_path_person_only):
 # --------------------------
 if config["run_eda"]:
     print("--- Running EDA ---")
-    with open(train_ann_path, 'r') as f:
+    with open(train_ann_path_person_only, 'r') as f:
         train_annos = json.load(f)
 
     extract_annotations(train_annos)
@@ -104,12 +104,12 @@ if config["run_eda"]:
     plot_bbox_counts(bbox_counts)
 
     print(f"The number of train data: {len(img_sizes)}\n")
-    with open(val_ann_path, 'r') as f:
+    with open(val_ann_path_person_only, 'r') as f:
         val_annos = json.load(f)
     img_sizes = get_img_sizes(val_annos)
     print(f"The number of val data: {len(img_sizes)}\n")
 
-    image_id_to_info, image_id_to_bboxes = get_image_id_dict(annotations)
+    image_id_to_info, image_id_to_bboxes = get_image_id_dict(train_annos)
     id = list(image_id_to_info.keys())[0]
     show_bbox(img_val_path + image_id_to_info[id]['file_name'], image_id_to_bboxes[id])
     print("--- EDA Finished ---")
@@ -120,7 +120,7 @@ if config["run_eda"]:
 # --------------------------
 network = SimpleDetector().to(device)
 criterion = DetectionLoss()
-optimizer = optim.AdamW(network.parameters(), lr=config["training"]["lr"], weight_decay=["training"]["weight_decay"])
+optimizer = optim.AdamW(network.parameters(), lr=config["training"]["lr"], weight_decay=config["training"]["weight_decay"])
 
 current_start_epoch = config["training"]["initial_start_epoch_manual"]
 if current_start_epoch != 0:
@@ -129,14 +129,13 @@ if current_start_epoch != 0:
 
 if config["training"]["freeze_backbone"]:
     set_backbone_requires_grad(network, requires_grad=False)
-    optimizer = optim.AdamW(network.parameters(), lr=config["training"]["lr"], weight_decay=["training"]["weight_decay"])
-
+    optimizer = optim.AdamW(filter(lambda p: p.requires_grad, network.parameters()), lr=config["training"]["lr"], weight_decay=config["training"]["weight_decay"])
 # --------------------------
 # DataLoaders
 # --------------------------
 train_loader, test_loader = get_custom_dataloaders(
     train_ann_path_person_only, train_img_dir, val_ann_path_person_only, val_img_dir, 
-    batch_size=config["training"]["batch_size"], input_size=["data"]["input_size"]
+    batch_size=config["training"]["batch_size"], input_size=config["data"]["input_size"]
 ) 
 
 # --------------------------
@@ -145,8 +144,8 @@ train_loader, test_loader = get_custom_dataloaders(
 init_csv_log(log_path, log_fieldnames)
 
 for i in range(config["training"]["epochs_to_run_this_session"]):
-    epoch = current_start_epoch + i
-    print(f"Epoch {epoch}/{epochs}")
+    epoch = current_start_epoch + i + 1
+    print(f"Epoch {epoch}/{config['training']['epochs_to_run_this_session']")
     train_loss = train_one_epoch(network, train_loader, optimizer, criterion, device, amp_context, scaler)
     test_loss = evaluate_loss(network, test_loader, criterion, device, amp_context)
 
@@ -156,7 +155,7 @@ for i in range(config["training"]["epochs_to_run_this_session"]):
         "test_loss": test_losses[epoch]
     })
     print(f"Train_loss: {train_loss:.4f}, Test_loss: {test_loss:.4f}")
-    torch.save(network.state_dict(), os.path.join(weights_dir, f"e_{epoch}.pt")
+    torch.save(network.state_dict(), os.path.join(weights_dir, f"e_{epoch}.pt"))
 
 # test_acc = evaluate_accuracy(network, test_loader, device, amp_context)
 # print(f"Test Acc: {test_acc:.4f}")
