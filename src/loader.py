@@ -60,7 +60,7 @@ def get_custom_dataloaders(
             A.MedianBlur(blur_limit=3, p=1.0),
 
         ], p=0.15),
-
+        A.Normalize(mean=imagenet_mean, std=imagenet_std),
         ToTensorV2()
     ], bbox_params=A.BboxParams(
         format='yolo',
@@ -79,7 +79,7 @@ def get_custom_dataloaders(
             value=letterbox_fill_color,
             p=1.0
         ),
-        A.Normalize(mean=imagenet_mean, std=imagenet_std)
+        A.Normalize(mean=imagenet_mean, std=imagenet_std),
         ToTensorV2()
     ], bbox_params=A.BboxParams(format='yolo', label_fields=['category_ids']))
 
