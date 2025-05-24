@@ -9,11 +9,6 @@ import random
 import torch
 import torchvision 
 
-
-def make_dir_if_not_exists(path):
-    if not os.path.exists(path):
-        os.makedirs(path)
-
 def set_seed(seed: int = 42):
     random.seed(seed)
     np.random.seed(seed)
@@ -23,9 +18,13 @@ def set_seed(seed: int = 42):
 
 def init_csv_log(path, fieldnames):
     os.makedirs(os.path.dirname(path), exist_ok=True)
-    with open(path, mode='w', newline='') as f:
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
+    file_exists = os.path.exists(path)
+    is_empty = file_exists and os.path.getsize(path) == 0
+
+    if not file_exists or is_empty:
+        with open(path, pode='w', newline='', encoding='utf-8') as f:
+            writer = csv.DictWriter(f, fieldnames=fieldnames)
+            writer.writeheader()
 
 def log_to_csv(path, data_dict):
     with open(path, mode='a', newline='') as f:
@@ -74,14 +73,6 @@ def box_cxcywh_to_xyxy(boxes):
     x2 = x_c + w / 2
     y2 = y_c + h / 2
     return torch.stack([x1, y1, x2, y2], dim=1)
-
-def box_cxcywh_to_xyxy(boxes: torch.Tensor) -> torch.Tensor:
-    x_c, y_c, w, h = boxes.unbind(dim=-1) 
-    x1 = x_c - w / 2
-    y1 = y_c - h / 2
-    x2 = x_c + w / 2
-    y2 = y_c + h / 2
-    return torch.stack([x1, y1, x2, y2], dim=-1) 
 
 def postprocess_single_image_predictions(
     raw_preds_single_image: torch.Tensor,

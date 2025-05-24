@@ -1,16 +1,8 @@
 import os
 import json
-def extract_person_data(data_path, file_name):
-    
-    if 'train' in file_name: t = 'train'
-    else: t = 'val'
-    new_file_path = f"{data_path}instances_{t}_person_only.json"
+def extract_person_data(original_file, new_file):
 
-    if os.path.exists(new_file_path): 
-        print(new_file_path, 'already exists.')
-        return
-
-    with open(data_path + file_name, 'r') as f:
+    with open(original_file, 'r') as f:
         coco = json.load(f)
 
     person_id = next(cat['id'] for cat in coco['categories'] if cat['name'] == 'person')
@@ -26,7 +18,7 @@ def extract_person_data(data_path, file_name):
         'categories': [cat for cat in coco['categories'] if cat['id'] == person_id]
     }
 
-    with open(new_file_path, 'w') as f:
+    with open(new_file, 'w') as f:
         json.dump(filtered_coco, f)
 
 

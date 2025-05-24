@@ -1,127 +1,162 @@
+import os
 import json
 
 import torch
 import torchvision
 import torch.optim as optim
 
-from src.utils import make_dir_if_not_exists
-from src.utils import set_seed, get_amp_components
-# --------------------------
-# Set Env
-# --------------------------
-# Path
-train_img_dir = './data/images/train2017'
-val_img_dir = './data/images/val2017'
-
-label_dir = "./data/labels/annotations/"
-train_file = "instances_train_person_only.json"
-val_file = "instances_val_person_only.json"
-train_ann_path = label_dir + train_file
-val_ann_path = label_dir + val_file
-    
-# Preprocess Data
+from src.utils import (
+    set_seed, get_amp_components, init_csv_log, log_to_csv
+)
 from src.preprocess import extract_person_data
-extract_person_data(label_dir, "instances_train2017.json")
-extract_person_data(label_dir, "instances_val2017.json")
+from src.eda import (
+    extract_annotations, get_img_sizes, plot_img_sizes, get_bbox_areas, plot_bbox_areas, 
+    get_bbox_counts, plot_bbox_counts, get_image_id_dict, show_bbox
+)
+from src.model import SimpleDetector
+from src.loss import DetectionLoss
+from src.utils import set_backbone_requires_grad
+from src.trainer import train_one_epoch, evaluate_loss, evaluate_accuracy
 
+# --------------------------
+# Configuration
+# --------------------------
+config = {
+    "seed": 42,
+    "run_eda": False,
+    "data": {
+        "base_dir": "./data",
+        "train_img_subdir": "images/train2017",
+        "val_img_subdir": "images/val2017",
+        "label_subdir": "labels/annotations",
+        "train_ann_file_original": "instances_train2017.json",
+        "val_ann_file_original": "instances_val2017.json",
+        "train_ann_file_person_only": "instances_train_person_only.json",
+        "val_ann_file_person_only": "instances_val_person_only.json",
+        "input_size": (640, 640)
+    },
+    "training": {
+        "batch_size": 128,
+        "epochs_to_run_this_session": 10,
+        "initial_start_epoch_manual": 82,
+        "lr": 0.0001,
+        "weight_decay": 1e-4,
+        "freeze_backbone": True
+    },
+    "experiment_name_template": "bs{bs}_lr{lr}",
+    "weights_dir_base": "weights",
+    "logs_dir_base": "experiments""
+}
+experiment_name = config["experiment_name_template"].format(bs=config["training"]["batch_size"], lr=config["training"]["lr"])
+
+# Path
+train_img_dir = os.path.join(config["data"]["base_dir"], config["data"]["train_img_subdir"])
+val_img_dir = os.path.join(config["data"]["base_dir"], config["data"]["val_img_subdir"])
+label_dir = os.path.join(config["data"]["base_dir"], config["data"]["label_subdir"])
+
+train_ann_path_original = os.path.join(label_dir, config["data"]["train_ann_path_original"])
+val_ann_path_original = os.path.join(label_dir, config["data"]["val_ann_path_original"])
+
+train_ann_path_person_only = os.path.join(label_dir, config["data"]["train_ann_path_person_only"])
+val_ann_path_person_only = os.path.join(label_dir, config["data"]["val_ann_path_person_only"])
+
+weights_dir = os.path.join(config["weights_dir_base"], experiment_name)
+log_dir = os.path.join(config["logs_dir_base"], experiment_name)   
+log_fieldnames = ["epoch", "train_loss", "test_loss""]
+
+os.makedirs(weights_dir, exist_ok=True)
+os.makedirs(log_dir, exist_ok=True)
+
+# --------------------------
 # Env
-set_seed(42)
+# --------------------------
+set_seed(config["seed"])
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print(f"Using device: {device}\n")
 amp_context, scaler = get_amp_components(device)
 
+# --------------------------
+# Data Preprocessing
+# --------------------------
+if not os.path.exists(train_ann_path_person_only):
+    extract_person_data(train_ann_path_original, train_ann_path_person_only)
 
+if not os.path.exists(val_ann_path_person_only):
+    extract_person_data(val_ann_path_original, val_ann_path_person_only)
 
 # --------------------------
 # Experiment EDA
 # --------------------------
-from src.eda import *
-with open(train_ann_path, 'r') as f:
-    train_annos = json.load(f)
+if config["run_eda"]:
+    print("--- Running EDA ---")
+    with open(train_ann_path, 'r') as f:
+        train_annos = json.load(f)
 
-extract_annotations(train_annos)
+    extract_annotations(train_annos)
 
-# category_counts = get_category_counts(annotations)
-# plot_category_nums(category_counts)
-img_sizes = get_img_sizes(train_annos)
-plot_img_sizes(img_sizes)
-bbox_areas = get_bbox_areas(train_annos)
-plot_bbox_areas(bbox_areas)
-bbox_counts = get_bbox_counts(train_annos)
-plot_bbox_counts(bbox_counts)
+    # category_counts = get_category_counts(annotations)
+    # plot_category_nums(category_counts)
+    img_sizes = get_img_sizes(train_annos)
+    plot_img_sizes(img_sizes)
+    bbox_areas = get_bbox_areas(train_annos)
+    plot_bbox_areas(bbox_areas)
+    bbox_counts = get_bbox_counts(train_annos)
+    plot_bbox_counts(bbox_counts)
 
-print(f"The number of train data: {len(img_sizes)}\n")
-with open(val_ann_path, 'r') as f:
-    val_annos = json.load(f)
-img_sizes = get_img_sizes(val_annos)
-print(f"The number of val data: {len(img_sizes)}\n")
+    print(f"The number of train data: {len(img_sizes)}\n")
+    with open(val_ann_path, 'r') as f:
+        val_annos = json.load(f)
+    img_sizes = get_img_sizes(val_annos)
+    print(f"The number of val data: {len(img_sizes)}\n")
 
-image_id_to_info, image_id_to_bboxes = get_image_id_dict(annotations)
-id = list(image_id_to_info.keys())[0]
-show_bbox(img_val_path + image_id_to_info[id]['file_name'], image_id_to_bboxes[id])
-
+    image_id_to_info, image_id_to_bboxes = get_image_id_dict(annotations)
+    id = list(image_id_to_info.keys())[0]
+    show_bbox(img_val_path + image_id_to_info[id]['file_name'], image_id_to_bboxes[id])
+    print("--- EDA Finished ---")
 
 
 # --------------------------
-# Define Params
+# Model, Criterion, Optimizer
 # --------------------------
-from src.model import SimpleDetector
-from src.loss import DetectionLoss
-from src.utils import set_backbone_requires_grad
-# HyperParams
-batch_size = 128
-epochs = 10
-lr = 0.0001
-experiment_name = f"bs{batch_size}_ep{epochs}_lr{lr}"
-
-network = SimpleDetector()
+network = SimpleDetector().to(device)
 criterion = DetectionLoss()
-optimizer = optim.AdamW(network.parameters(), lr=lr, weight_decay=1e-4)
+optimizer = optim.AdamW(network.parameters(), lr=config["training"]["lr"], weight_decay=["training"]["weight_decay"])
 
-start_ep = 82
-weight_path = "bs128_ep10_lr0.0001"
-make_dir_if_not_exists(f"weights/{experiment_name}")
-if start_ep != 0:
-    network.load_state_dict(torch.load(f"./weights/{weight_path}/e_{start_ep}.pt", map_location=device))
+current_start_epoch = config["training"]["initial_start_epoch_manual"]
+if current_start_epoch != 0:
+    weight_to_load = os.path.join(weights_dir, f"e_{current_start_epoch}")
+    network.load_state_dict(torch.load(weight_to_load, map_location=device))
 
-set_backbone_requires_grad(network, requires_grad=False)
-
-
+if config["training"]["freeze_backbone"]:
+    set_backbone_requires_grad(network, requires_grad=False)
+    optimizer = optim.AdamW(network.parameters(), lr=config["training"]["lr"], weight_decay=["training"]["weight_decay"])
 
 # --------------------------
-# Define Train Procedure
+# DataLoaders
 # --------------------------
-from src.loader import get_custom_dataloaders
-train_loader, test_loader = get_custom_dataloaders(train_ann_path, train_img_dir, val_ann_path, val_img_dir, batch_size=batch_size, input_size=(640, 640)) 
-network.to(device)
+train_loader, test_loader = get_custom_dataloaders(
+    train_ann_path_person_only, train_img_dir, val_ann_path_person_only, val_img_dir, 
+    batch_size=config["training"]["batch_size"], input_size=["data"]["input_size"]
+) 
 
-train_losses = []
-test_losses = []
+# --------------------------
+# Training Loop 
+# --------------------------
+init_csv_log(log_path, log_fieldnames)
 
-# Training
-from src.trainer import train_one_epoch, evaluate_loss, evaluate_accuracy
-for epoch in range(1, epochs + 1):
+for i in range(config["training"]["epochs_to_run_this_session"]):
+    epoch = current_start_epoch + i
     print(f"Epoch {epoch}/{epochs}")
     train_loss = train_one_epoch(network, train_loader, optimizer, criterion, device, amp_context, scaler)
-    train_losses.append(train_loss)
-
     test_loss = evaluate_loss(network, test_loader, criterion, device, amp_context)
-    test_losses.append(test_loss)
 
-    print(f"Train_loss: {train_loss:.4f}, Test_loss: {test_loss:.4f}")
-    torch.save(network.state_dict(), f'weights/{experiment_name}/e_{epoch + start_ep}.pt') 
-
-# test_acc = evaluate_accuracy(network, test_loader, device, amp_context)
-# print(f"Test Acc: {test_acc:.4f}")
-
-# Logging
-from src.utils import init_csv_log, log_to_csv
-log_path = f"experiments/{experiment_name}/metrics_{epochs + start_ep}.csv"
-
-init_csv_log(log_path, ["epoch", "train_loss", "test_loss"])
-for epoch in range(len(train_losses)):
     log_to_csv(log_path, {
-        "epoch": epoch + start_ep,
+        "epoch": epoch,
         "train_loss": train_losses[epoch],
         "test_loss": test_losses[epoch]
     })
+    print(f"Train_loss: {train_loss:.4f}, Test_loss: {test_loss:.4f}")
+    torch.save(network.state_dict(), os.path.join(weights_dir, f"e_{epoch}.pt")
+
+# test_acc = evaluate_accuracy(network, test_loader, device, amp_context)
+# print(f"Test Acc: {test_acc:.4f}")
