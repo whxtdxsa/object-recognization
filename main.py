@@ -39,10 +39,10 @@ config = {
     "training": {
         "batch_size": 128,
         "epochs_to_run_this_session": 10,
-        "initial_start_epoch_manual": 82,
+        "initial_start_epoch_manual": 88,
         "lr": 0.0001,
         "weight_decay": 3e-4,
-        "freeze_backbone": True
+        "freeze_backbone": False
     },
     "experiment_name_template": "bs{bs}_lr{lr}",
     "weights_dir_base": "weights",
