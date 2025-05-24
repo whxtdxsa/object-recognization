@@ -41,7 +41,7 @@ config = {
         "epochs_to_run_this_session": 10,
         "initial_start_epoch_manual": 82,
         "lr": 0.0001,
-        "weight_decay": 1e-4,
+        "weight_decay": 3e-4,
         "freeze_backbone": True
     },
     "experiment_name_template": "bs{bs}_lr{lr}",
@@ -153,8 +153,8 @@ for i in range(config["training"]["epochs_to_run_this_session"]):
 
     log_to_csv(log_path, {
         "epoch": epoch,
-        "train_loss": train_losses[epoch],
-        "test_loss": test_losses[epoch]
+        "train_loss": train_loss,
+        "test_loss": test_loss
     })
     print(f"Train_loss: {train_loss:.4f}, Test_loss: {test_loss:.4f}")
     torch.save(network.state_dict(), os.path.join(weights_dir, f"e_{epoch}.pt"))
