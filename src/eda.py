@@ -1,3 +1,5 @@
+from collections import Counter, defaultdict
+import matplotlib.pyplot as plt
 save_path = "./asset/"
 
 
@@ -10,7 +12,6 @@ def extract_annotations(anno):
 
     print('-------------------------------------\n')
 
-from collections import Counter
 def get_category_counts(anno):
     category_counts = Counter()
     categories = {cat['id']: cat['name'] for cat in annotations['categories']}
@@ -20,7 +21,6 @@ def get_category_counts(anno):
 
     return category_counts
 
-
 def get_img_sizes(anno): 
     img_sizes = []
     
@@ -28,7 +28,6 @@ def get_img_sizes(anno):
         img_sizes.append((img['width'], img['height']))
 
     return img_sizes
-
 
 def get_bbox_areas(anno):
     bbox_areas = []
@@ -38,7 +37,6 @@ def get_bbox_areas(anno):
         
     return bbox_areas
 
-
 def get_bbox_counts(anno):
     bbox_counts = Counter()
     for ann in anno['annotations']:
@@ -46,8 +44,6 @@ def get_bbox_counts(anno):
 
     return list(bbox_counts.values())
 
-
-import matplotlib.pyplot as plt
 def plot_category_nums(category_counts):
     counts_all = sorted(category_counts.values(), reverse=True)
     plt.figure(figsize=(10, 5))
@@ -79,7 +75,6 @@ def plot_category_nums(category_counts):
     plt.savefig(save_path + "categroy_dist.png")
     plt.clf()
 
-
 def plot_img_sizes(img_sizes):
     widths, heights = zip(*img_sizes)
 
@@ -95,7 +90,6 @@ def plot_img_sizes(img_sizes):
     plt.savefig(save_path + "image_size_dist.png")
     plt.clf()
 
-
 def plot_bbox_areas(bbox_areas):
 
     plt.figure(figsize=(10, 5))
@@ -109,7 +103,6 @@ def plot_bbox_areas(bbox_areas):
     plt.tight_layout()
     plt.savefig(save_path + "bbox_area.png")
     plt.clf()
-
 
 def plot_bbox_counts(bbox_counts):
 
@@ -125,8 +118,6 @@ def plot_bbox_counts(bbox_counts):
     plt.savefig(save_path + "object_per_img.png")
     plt.clf()
 
-
-from collections import defaultdict
 def get_image_id_dict(anno):
     image_id_to_info = {img['id']: img for img in anno['images']}
 
@@ -140,7 +131,6 @@ def get_image_id_dict(anno):
         image_id_to_bboxes[ann['image_id']].append([x, y, x_max, y_max])
 
     return image_id_to_info, image_id_to_bboxes
-
 
 def show_bbox(image_path, bboxes):
     img = Image.open(image_path)

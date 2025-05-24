@@ -1,13 +1,10 @@
 import torch
-# Env
 from src.utils import set_seed
 set_seed(42)
 
-
-print(1)
 from src.loader import get_custom_dataloaders
 train_loader, test_loader = get_custom_dataloaders(batch_size=10) 
-print(2)
+
 from src.utils import draw_bboxes
 for i, (images, targets) in enumerate(train_loader):
     target = targets[0]
