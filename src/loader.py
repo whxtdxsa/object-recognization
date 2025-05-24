@@ -24,6 +24,9 @@ def get_custom_dataloaders(
     val_img_dir,
     batch_size=128, input_size=(640, 640)
 ):
+    imagenet_mean = [0.485, 0.456, 0.406]
+    imagenet_std = [0.229, 0.224, 0.225]
+
     IMG_WIDTH, IMG_HEIGHT = input_size
     letterbox_fill_color = (128, 128, 128)
 
@@ -76,6 +79,7 @@ def get_custom_dataloaders(
             value=letterbox_fill_color,
             p=1.0
         ),
+        A.Normalize(mean=imagenet_mean, std=imagenet_std)
         ToTensorV2()
     ], bbox_params=A.BboxParams(format='yolo', label_fields=['category_ids']))
 
