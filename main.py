@@ -16,6 +16,7 @@ from src.eda import (
 from src.model import SimpleDetector
 from src.loss import DetectionLoss
 from src.utils import set_backbone_requires_grad
+from src.loader import get_custom_dataloaders
 from src.trainer import train_one_epoch, evaluate_loss, evaluate_accuracy
 
 # --------------------------
@@ -62,6 +63,7 @@ val_ann_path_person_only = os.path.join(label_dir, config["data"]["val_ann_file_
 
 weights_dir = os.path.join(config["weights_dir_base"], experiment_name)
 log_dir = os.path.join(config["logs_dir_base"], experiment_name)   
+log_path = os.path.join(log_dir, "metrics.csv")
 log_fieldnames = ["epoch", "train_loss", "test_loss"]
 
 os.makedirs(weights_dir, exist_ok=True)
@@ -124,7 +126,7 @@ optimizer = optim.AdamW(network.parameters(), lr=config["training"]["lr"], weigh
 
 current_start_epoch = config["training"]["initial_start_epoch_manual"]
 if current_start_epoch != 0:
-    weight_to_load = os.path.join(weights_dir, f"e_{current_start_epoch}")
+    weight_to_load = os.path.join(weights_dir, f"e_{current_start_epoch}.pt")
     network.load_state_dict(torch.load(weight_to_load, map_location=device))
 
 if config["training"]["freeze_backbone"]:
@@ -145,7 +147,7 @@ init_csv_log(log_path, log_fieldnames)
 
 for i in range(config["training"]["epochs_to_run_this_session"]):
     epoch = current_start_epoch + i + 1
-    print(f"Epoch {epoch}/{config['training']['epochs_to_run_this_session']")
+    print(f"Epoch {epoch}/{current_start_epoch + 1 + config['training']['epochs_to_run_this_session']}")
     train_loss = train_one_epoch(network, train_loader, optimizer, criterion, device, amp_context, scaler)
     test_loss = evaluate_loss(network, test_loader, criterion, device, amp_context)
 
